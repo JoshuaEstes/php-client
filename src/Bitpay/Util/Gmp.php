@@ -55,7 +55,7 @@ class Gmp
         $p = $parameters->pHex();
         $a = $parameters->aHex();
 
-        $tmp = self::gmpD2B($hex);
+        $tmp = strrev(self::gmpD2B($hex));
         $n   = strlen($tmp) - 1;
         $S   = new Point(PointInterface::INFINITY, PointInterface::INFINITY);
 
@@ -71,15 +71,23 @@ class Gmp
     }
 
     /**
+     * @see self::decimal2binary
+     */
+    public static function gmpD2B($dec)
+    {
+        return self::decimal2binary($dec);
+    }
+
+    /**
      * This method returns a binary string representation of
      * the decimal number. Used for the doubleAndAdd() method.
      *
      * @see http://php.net/manual/en/function.decbin.php but for large numbers
      *
-     * @param string
+     * @param string   $dec;
      * @return string
      */
-    public static function gmpD2B($dec)
+    public static function decimal2binary($dec)
     {
         if (substr(strtolower($dec), 0, 2) == '0x') {
             $dec = Util::decodeHex(substr($dec, 2));
@@ -87,15 +95,15 @@ class Gmp
 
         $bin  = '';
         while (gmp_cmp($dec, '0') > 0) {
-            if (gmp_mod($dec, 2) == 1) {
-                $bin .= '1';
+            if (gmp_mod($dec, 2) == '1') {
+                $bin = '1' . $bin;
             } else {
-                $bin .= '0';
+                $bin = '0' . $bin;
             }
             $dec = gmp_div($dec, 2);
         }
 
-        return strrev($bin);
+        return $bin;
     }
 
     /**
@@ -150,11 +158,13 @@ class Gmp
             $R['x'] = gmp_strval($R['x']);
             $R['y'] = gmp_strval(gmp_mod($yadd, $p));
         } catch (\Exception $e) {
-            // TODO throw exception
-            return 'Error in Util::gmpPointDouble(): '.$e->getMessage();
+            throw new \Exception('Error in Util::gmpPointDouble(): '.$e->getMessage(), $e->getCode(), $e);
         }
 
-        return new Point($R['x'], $R['y']);
+        return new Point(
+            $R['x'],
+            $R['y']
+        );
     }
 
     /**
@@ -179,7 +189,7 @@ class Gmp
         }
 
         if ($P->getX() == $Q->getX() && $P->getY() == $Q->getY()) {
-            return self::gmpPointDouble(new Point($P->getX(), $P->getY()));
+            return self::gmpPointDouble($P);
         }
 
         $p = '0x'.Secp256k1::P;
@@ -193,11 +203,11 @@ class Gmp
 
         // Critical math section
         try {
-            $m      = gmp_sub($P->getY(), $Q->getY());
-            $n      = gmp_sub($P->getX(), $Q->getX());
-            $o      = gmp_invert($n, $p);
-            $st     = gmp_mul($m, $o);
-            $s      = gmp_mod($st, $p);
+            $m  = gmp_sub($P->getY(), $Q->getY());
+            $n  = gmp_sub($P->getX(), $Q->getX());
+            $o  = gmp_invert($n, $p);
+            $st = gmp_mul($m, $o);
+            $s  = gmp_mod($st, $p);
 
             $R['x'] = gmp_mod(
                 gmp_sub(

@@ -103,27 +103,32 @@ class PublicKey extends Key
             throw new \Exception('Private Key is invalid and cannot be used to generate a public key');
         }
 
-        $point = new Point(
-            '0x'.substr(Secp256k1::G, 0, 62),
-            '0x'.substr(Secp256k1::G, 62, 62)
-        );
-
         $R = Gmp::doubleAndAdd(
             '0x'.$this->privateKey->getHex(),
-            $point
+            new Point(
+                '0x'.substr(Secp256k1::G, 0, 62),
+                '0x'.substr(Secp256k1::G, 62, 62)
+            )
         );
 
-        $RxHex = Util::encodeHex($R->getX());
-        $RyHex = Util::encodeHex($R->getY());
+        $RxHex = Util::decimal2hexidecimal($R->getX());
+        $RyHex = Util::decimal2hexidecimal($R->getY());
 
         $RxHex = str_pad($RxHex, 64, '0', STR_PAD_LEFT);
         $RyHex = str_pad($RyHex, 64, '0', STR_PAD_LEFT);
 
+        //var_dump(
+        //    $RxHex,
+        //    $RyHex
+        //);
+
         $this->x   = $RxHex;
         $this->y   = $RyHex;
         $this->hex = sprintf('%s%s', $RxHex, $RyHex);
-        $this->dec = Util::decodeHex($this->hex);
+        $this->dec = Util::decimal2hexidecimal($this->hex);
         $this->generated = true;
+
+        //var_dump($this->isValidPoint());
 
         return $this;
     }
@@ -137,6 +142,11 @@ class PublicKey extends Key
     public function isValid()
     {
         return ((!empty($this->hex) && !ctype_xdigit($this->hex)) && (!empty($this->dec) && !ctype_digit($this->dec)));
+    }
+
+    public function isValidPoint()
+    {
+        return Gmp::pointTest(new Point($this->x, $this->y));
     }
 
     /**

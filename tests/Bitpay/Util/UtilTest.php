@@ -144,13 +144,19 @@ class UtilTest extends \PHPUnit_Framework_TestCase
         Util::encodeHex(new \StdClass());
     }
 
-    public function testEncodeHex()
+    public function testDecimal2hexidecimal()
     {
         $data = array(
             array('123456789', '75bcd15'),
+            array('49496295', '2f340e7'),
+            array('289480223093290488558927462521719769633174961', 'cfb11ead453994ba67de18eda5814af20b5b1'),
         );
 
         foreach ($data as $datum) {
+            $this->assertSame(
+                $datum[1],
+                Util::decimal2hexidecimal($datum[0])
+            );
             $this->assertSame(
                 $datum[1],
                 Util::encodeHex($datum[0])
@@ -163,6 +169,7 @@ class UtilTest extends \PHPUnit_Framework_TestCase
         $data = array(
             array('75bcd15', '123456789'),
             array('0x75bcd15', '123456789'),
+            array('2f340e7', '49496295'),
         );
 
         foreach ($data as $datum) {

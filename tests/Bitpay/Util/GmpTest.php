@@ -39,9 +39,10 @@ class GmpTest extends \PHPUnit_Framework_TestCase
         $point = Gmp::doubleAndAdd('1', new Point(1, 1));
         $this->assertEquals('1', $point->getX());
         $this->assertEquals('1', $point->getY());
+        $this->assertFalse($point->isInfinity());
     }
 
-    public function testGmpD2BWithInteger()
+    public function testDicimal2binary()
     {
         $data = array(
             array('123456789', '111010110111100110100010101'),
@@ -49,23 +50,54 @@ class GmpTest extends \PHPUnit_Framework_TestCase
         );
 
         foreach ($data as $datum) {
-            $this->assertSame($datum[1], Gmp::gmpD2B($datum[0]));
+            $this->assertSame($datum[1], Gmp::decimal2binary($datum[0]));
         }
     }
 
     public function testPointDouble()
     {
-        //$point = Gmp::gmpPointDouble(new Point(1, 1));
-        //var_dump($point);
+        // point, Expected X, Expected Y
+        $data = array(
+            //array(
+            //    new Point(100, 100),
+            //    '',
+            //    '',
+            //),
+            array(
+                new Point(1, 1),
+                '28948022309329048855892746252171976963317496166410141009864396001977208667916',
+                '14474011154664524427946373126085988481658748083205070504932198000988604333958',
+            ),
+        );
+
+        foreach ($data as $datum) {
+            $point = Gmp::gmpPointDouble($datum[0]);
+            //var_dump($point);
+            $this->assertGreaterThanOrEqual(77, strlen($point->getX()));
+            $this->assertGreaterThanOrEqual(77, strlen($point->getY()));
+            $this->assertSame($datum[1], $point->getX());
+            $this->assertSame($datum[2], $point->gety());
+        }
     }
 
     public function testGmpPointAdd()
     {
-        //$point = Gmp::gmpPointAdd(
-        //    new Point(1, 1),
-        //    new Point(1, 1)
-        //);
-        //var_dump($point);
+        // A, B, Expected X, Expected Y
+        $data = array(
+            array(
+                new Point(1, 1),
+                new Point(1, 1),
+                '28948022309329048855892746252171976963317496166410141009864396001977208667916',
+                '14474011154664524427946373126085988481658748083205070504932198000988604333958',
+            ),
+        );
+        foreach ($data as $datum) {
+            $point = Gmp::gmpPointAdd($datum[0], $datum[1]);
+            $this->assertGreaterThanOrEqual(77, strlen($point->getX()));
+            $this->assertGreaterThanOrEqual(77, strlen($point->getY()));
+            $this->assertSame($datum[2], $point->getX());
+            $this->assertSame($datum[3], $point->gety());
+        }
     }
 
     public function testGmpBinconv()
