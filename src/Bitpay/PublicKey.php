@@ -50,21 +50,13 @@ class PublicKey extends Key
     protected $generated = false;
 
     /**
-     * Returns the compressed public key value
+     * Returns the compressed value of the public key.
      *
      * @return string
      */
     public function __toString()
     {
-        if (is_null($this->x)) {
-            return '';
-        }
-
-        if (gmp_strval(gmp_mod('0x'.$this->y, '0x02')) == '1') {
-            return sprintf('03%s', $this->x);
-        } else {
-            return sprintf('02%s', $this->x);
-        }
+        return (string) $this->x;
     }
 
     /**
@@ -126,8 +118,8 @@ class PublicKey extends Key
         $RxHex = Util::encodeHex($R->getX());
         $RyHex = Util::encodeHex($R->getY());
 
-        str_pad($RxHex, 64, '0', STR_PAD_LEFT);
-        str_pad($RyHex, 64, '0', STR_PAD_LEFT);
+        $RxHex = str_pad($RxHex, 64, '0', STR_PAD_LEFT);
+        $RyHex = str_pad($RyHex, 64, '0', STR_PAD_LEFT);
 
         $this->x   = $RxHex;
         $this->y   = $RyHex;

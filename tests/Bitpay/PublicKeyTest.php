@@ -110,21 +110,11 @@ class PublicKeyTest extends \PHPUnit_Framework_TestCase
     public function testToString()
     {
         $pubKey = new PublicKey();
-        $this->assertNotNull($pubKey);
-
-        $pubKey->setPrivateKey(PrivateKey::create()->generate());
-
+        $pubKey->setPrivateKey($this->getMockPrivateKey());
         $this->assertSame('', (string) $pubKey);
+        $pubKey->generate();
 
-        $pubKey->generate(PrivateKey::create()->generate());
-
-        if ('02'.$pubKey->getX() == $pubKey) {
-            $compressed = '02'.$pubKey->getX();
-        } else {
-            $compressed = '03'.$pubKey->getX();
-        }
-
-        $this->assertSame($compressed, (string) $pubKey);
+        //$this->assertSame($compressed, (string) $pubKey);
         // compress is 33 length
         //$this->assertEquals(33, strlen((string) $pubKey));
         // uncompresses is 66 length
@@ -137,14 +127,10 @@ class PublicKeyTest extends \PHPUnit_Framework_TestCase
     public function testGetX()
     {
         $pubKey = new PublicKey();
-        $this->assertNotNull($pubKey);
-
-        $pubKey->setPrivateKey(PrivateKey::create()->generate());
-
+        $pubKey->setPrivateKey($this->getMockPrivateKey());
         $this->assertNull($pubKey->getX());
-
-        $pubKey->generate(PrivateKey::create()->generate());
-
+        $pubKey->generate();
+        $this->assertNotNull($pubKey->getX());
         $this->assertEquals(64, strlen($pubKey->getX()));
     }
 
