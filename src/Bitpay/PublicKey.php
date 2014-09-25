@@ -50,8 +50,6 @@ class PublicKey extends Key
     protected $generated = false;
 
     /**
-     * Returns the compressed value of the public key.
-     *
      * @return string
      */
     public function __toString()

@@ -141,6 +141,7 @@ class PrivateKey extends Key
         }
 
         $e = Util::decodeHex(hash('sha256', $data));
+        $parameters = new Secp256k1();
 
         do {
             if (substr(strtolower($this->getHex()), 0, 2) != '0x') {
@@ -152,12 +153,13 @@ class PrivateKey extends Key
             $k = SecureRandom::generateRandom(32);
 
             $k_hex = '0x'.strtolower(bin2hex($k));
-            $n_hex = '0x'.Secp256k1::N;
-            $a_hex = '0x'.Secp256k1::A;
-            $p_hex = '0x'.Secp256k1::P;
 
-            $Gx = '0x'.substr(Secp256k1::G, 0, 62);
-            $Gy = '0x'.substr(Secp256k1::G, 64, 62);
+            $n_hex = $parameters->nHex();
+            $a_hex = $parameters->aHex();
+            $p_hex = $parameters->pHex();
+
+            $Gx = $parameters->gxHex();
+            $Gy = $parameters->gyHex();
 
             $P = new Point($Gx, $Gy);
 
@@ -167,22 +169,22 @@ class PrivateKey extends Key
             $Rx_hex = Util::encodeHex($R->getX());
             $Ry_hex = Util::encodeHex($R->getY());
 
-            while (strlen($Rx_hex) < 64) {
-                $Rx_hex = '0'.$Rx_hex;
-            }
-
-            while (strlen($Ry_hex) < 64) {
-                $Ry_hex = '0'.$Ry_hex;
-            }
+            $Rx_hex = str_pad($Rx_hex, 64, '0', STR_PAD_LEFT);
+            $Ry_hex = str_pad($Ry_hex, 64, '0', STR_PAD_LEFT);
 
             // r = x1 mod n
-            $r = gmp_strval(gmp_mod('0x'.$Rx_hex, $n_hex));
+            $r = gmp_strval(
+                gmp_mod(
+                    '0x'.$Rx_hex,
+                    $parameters->nHex()
+                )
+            );
 
             // s = k^-1 * (e+d*r) mod n
-            $edr = gmp_add($e, gmp_mul($d, $r));
-            $invk = gmp_invert($k_hex, $n_hex);
+            $edr  = gmp_add($e, gmp_mul($d, $r));
+            $invk = gmp_invert($k_hex, $parameters->nHex());
             $kedr = gmp_mul($invk, $edr);
-            $s = gmp_strval(gmp_mod($kedr, $n_hex));
+            $s    = gmp_strval(gmp_mod($kedr, $parameters->nHex()));
 
             // The signature is the pair (r,s)
             $signature = array(
@@ -190,78 +192,17 @@ class PrivateKey extends Key
                 's' => Util::encodeHex($s),
             );
 
-            while (strlen($signature['r']) < 64) {
-                $signature['r'] = '0'.$signature['r'];
-            }
+            $signature['r'] = str_pad($signature['r'], 64, '0', STR_PAD_LEFT);
+            $signature['s'] = str_pad($signature['s'], 64, '0', STR_PAD_LEFT);
 
-            while (strlen($signature['s']) < 64) {
-                $signature['s'] = '0'.$signature['s'];
-            }
         } while (gmp_cmp($r, '0') <= 0 || gmp_cmp($s, '0') <= 0);
 
         $sig = array(
-            'sig_rs' => $signature,
+            'sig_rs'  => $signature,
             'sig_hex' => self::serializeSig($signature['r'], $signature['s']),
         );
 
         return $sig['sig_hex']['seq'];
-        // TODO: Signature code is already in Bitauth so is this needed here?
-
-        if (empty($message)) {
-            throw new \Exception('You did not provide a message to hash.');
-        }
-
-        $e = Util::decodeHex(hash('sha256', $message));
-
-        do {
-            if (substr(strtolower($this->hex), 0, 2) != '0x') {
-                $d = '0x'.$this->hex;
-            } else {
-                $d = $this->hex;
-            }
-
-            $k = SecureRandom::generateRandom(32);
-
-            $kHex = '0x'.strtolower(bin2hex($k));
-
-            $gX   = '0x'.substr(Secp256k1::G, 0, 62);
-            $gY   = '0x'.substr(Secp256k1::G, 64, 62);
-
-            $p = new Point($gX, $gY);
-            $r = Gmp::doubleAndAdd($this->hex, $p);
-
-            $rXHex = Util::encodeHex($r->getX());
-            $rYHex = Util::encodeHex($r->getY());
-
-            while (strlen($rXHex) < 64) {
-                $rXHex = '0'.$rXHex;
-            }
-
-            while (strlen($rYHex) < 64) {
-                $rYHex = '0'.$rYHex;
-            }
-
-            $r2   = gmp_strval(gmp_mod('0x'.$rXHex, '0x'.Secp256k1::N));
-            $edr  = gmp_add($e, gmp_mul($d, $r2));
-            $invk = gmp_invert($kHex, '0x'.Secp256k1::N);
-            $kedr = gmp_mul($invk, $edr);
-            $s    = gmp_strval(gmp_mod($kedr, '0x'.Secp256k1::N));
-
-            $signature = array(
-                'r' => Util::encodeHex($r2),
-                's' => Util::encodeHex($s),
-            );
-
-            while (strlen($signature['r']) < 64) {
-                $signature['r'] = '0'.$signature['r'];
-            }
-
-            while (strlen($signature['s']) < 64) {
-                $signature['s'] = '0'.$signature['s'];
-            }
-        } while (gmp_cmp($r2, '0') <= 0 || gmp_cmp($s, '0') <= 0);
-
-        return $signature;
     }
 
     public function isGenerated()
@@ -284,17 +225,16 @@ class PrivateKey extends Key
             $digits[$x] = chr($x);
         }
 
-        $dec = Util::decodeHex($r);
-
-        $byte = '';
-        $seq = '';
+        $dec    = Util::decodeHex($r);
+        $byte   = '';
+        $seq    = '';
         $retval = array();
 
         while (gmp_cmp($dec, '0') > 0) {
-            $dv = gmp_div($dec, '256');
-            $rem = gmp_strval(gmp_mod($dec, '256'));
-            $dec = $dv;
-            $byte = $byte.$digits[$rem];
+            $dv   = gmp_div($dec, '256');
+            $rem  = gmp_strval(gmp_mod($dec, '256'));
+            $dec  = $dv;
+            $byte = $byte . $digits[$rem];
         }
 
         $byte = strrev($byte);
@@ -311,9 +251,9 @@ class PrivateKey extends Key
         $byte = '';
 
         while (gmp_cmp($dec, '0') > 0) {
-            $dv = gmp_div($dec, '256');
-            $rem = gmp_strval(gmp_mod($dec, '256'));
-            $dec = $dv;
+            $dv   = gmp_div($dec, '256');
+            $rem  = gmp_strval(gmp_mod($dec, '256'));
+            $dec  = $dv;
             $byte = $byte.$digits[$rem];
         }
 
@@ -325,9 +265,9 @@ class PrivateKey extends Key
         }
 
         $retval['bin_s'] = bin2hex($byte);
-        $seq = $seq.chr(0x02).chr(strlen($byte)).$byte;
-        $seq = chr(0x30).chr(strlen($seq)).$seq;
-        $retval['seq'] = bin2hex($seq);
+        $seq             = $seq.chr(0x02).chr(strlen($byte)).$byte;
+        $seq             = chr(0x30).chr(strlen($seq)).$seq;
+        $retval['seq']   = bin2hex($seq);
 
         return $retval;
     }
