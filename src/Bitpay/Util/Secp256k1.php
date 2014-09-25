@@ -60,12 +60,12 @@ class Secp256k1 implements CurveParameterInterface
 
     public function gxHex()
     {
-        return '0x'.substr(self::G, 0, 62);
+        return '0x'.substr(self::G, 0, 64);
     }
 
     public function gyHex()
     {
-        return '0x'.substr(self::G, 64, 62);
+        return '0x'.substr(self::G, 64, 64);
     }
 
     public function hHex()
