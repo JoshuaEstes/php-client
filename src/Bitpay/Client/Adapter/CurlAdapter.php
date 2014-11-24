@@ -37,10 +37,10 @@ class CurlAdapter implements AdapterInterface
     public function sendRequest(RequestInterface $request)
     {
         $curl = curl_init();
-        curl_setopt_array(
-            $curl,
-            array_merge($this->getCurlDefaultOptions($request), $this->options)
-        );
+        curl_setopt_array($curl, $this->getCurlDefaultOptions($request));
+        if (!empty($this->options)) {
+            curl_setopt_array($curl, $this->options);
+        }
 
         if (RequestInterface::METHOD_POST == $request->getMethod()) {
             curl_setopt_array(
